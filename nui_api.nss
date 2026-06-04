@@ -103,9 +103,32 @@ const int NUI_DEBUG_REST = 0;
 const int NUI_DEBUG_PERSIST = 0;
 
 /* ----------------------------------------------------------------------- */
+/*  DATA STRUCTURES                                                         */
+/* ----------------------------------------------------------------------- */
+
+/// @struct NUIEventData
+/// @brief Standardized event data passed to NUI event handlers
+/// @note Adopted from tinygiant98 NUI system for consistency
+struct NUIEventData {
+    object oPC;           ///< Player character triggering the event
+    int    nToken;        ///< NUI window token
+    string sFormID;       ///< Form/window ID (from NuiGetWindowId)
+    string sEvent;        ///< Event type: "mouseup", "click", "watch", "close", "open"
+    string sControlID;    ///< Control/element ID (from NuiGetEventElement)
+    int    nIndex;        ///< Array index if control is in listbox/array (-1 if N/A)
+    json   jPayload;      ///< Event-specific payload data
+};
+
+/* ----------------------------------------------------------------------- */
 /*  ALL PUBLIC FUNCTION DECLARATIONS                                       */
 /*  (These are ALL declared here, BEFORE any implementations)              */
 /* ----------------------------------------------------------------------- */
+
+// Event helpers
+/// @brief Extract all NUI event data into a standardized struct
+/// @returns struct NUIEventData populated from current NUI event
+/// @note Call only from within a NUI event handler (EVENT_SCRIPT_MODULE_ON_NUI_EVENT)
+struct NUIEventData NUI_GetEventData();
 
 // Event handler
 int HandleNuiEvent();
@@ -133,6 +156,23 @@ string GetTokenByPosition(string sString, int nPosition, string sDelim)
         return GetStringRight(sString, GetStringLength(sString) - nStart);
     
     return GetSubString(sString, nStart, nEnd - nStart);
+}
+
+/* ----------------------------------------------------------------------- */
+/*  EVENT HANDLER IMPLEMENTATIONS                                          */
+/* ----------------------------------------------------------------------- */
+
+struct NUIEventData NUI_GetEventData()
+{
+    struct NUIEventData ed;
+    ed.oPC       = NuiGetEventPlayer();
+    ed.nToken    = NuiGetEventWindow();
+    ed.sFormID   = NuiGetWindowId(ed.oPC, ed.nToken);
+    ed.sEvent    = NuiGetEventType();
+    ed.sControlID = NuiGetEventElement();
+    ed.nIndex    = NuiGetEventArrayIndex();
+    ed.jPayload  = NuiGetEventPayload();
+    return ed;
 }
 
 /* ======================================================================= */

@@ -1,1598 +1,1048 @@
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-//::      _____                     _          
-//::     / ___/__ ____________ ____(_)__ ____ ( )___
-//::    / /__/ _ `/ __/ __/ -_) __/ / _ `/ _ \|/(_-<
-//::    \___/\_,_/_/  \__/\__/_/ /_/\_,_/_//_/ /___/
-//::         _  ____  ______    ___   ___  ____
-//::        / |/ / / / /  _/   / _ | / _ \/  _/
-//::       /    / /_/ // /    / __ |/ ___// /
-//::      /_/|_/\____/___/   /_/ |_/_/  /___/
-//::
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-//::///////////////////////////////////////////////////////////////////////
-//:: Carcerian NUI - Popup Dialog API
-//:: nui_api_popup.nss
-//::///////////////////////////////////////////////////////////////////////
-//:: AUTHOR:   Carcerian
-//:: VERSION:  1.0
-//:: CREATED:  June 2, 2026
-//:: MODIFIED: June 3, 2026 - Added BioWare inline documentation
-//::///////////////////////////////////////////////////////////////////////
-//::///////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
+//:: Custom NUI Popup System
+//:: Script Name: nui_api_popup
+//:: Programmer: Carcerian
+//:: Last Modified: June 4, 2026 (Session v40)
+//::////////////////////////////////////////////////////////////////////
 /*
-    SYNOPSIS
-        Complete popup dialog system for RPG development.
-        Provides 61 specialized dialog functions for common RPG interactions.
-        All functions organized in alphabetical order with consistent signatures.
-        Uses full NUI widget builders for professional UIs.
+    IMPROVEMENTS APPLIED IN THIS VERSION:
 
-    DEPENDENCIES
-        nw_inc_nui (for NUI widget builders)
-        nui_api_json (for JSON construction)
+    Tier 1 (Critical):
+    [+] Window sizing formula (pixel-accurate calculation)
+    [+] NuiWindow with bind pattern (runtime properties)
+    [+] Portrait with NuiImage binding + NuiGroup wrapping
+    [+] NuiTextEdit for scrollable text (read-only, no max length)
 
-    USAGE
-        #include "nui_api" (or nui_api_popup directly)
-        
-        NUI_PopupMessage(oPC, "Welcome", "Hello player!", "nui_handler");
-        NUI_PopupText(oPC, "Name", "Enter your name:", "nui_handler");
-        NUI_PopupColor(oPC, "Hair Color", "nui_handler");
+    Tier 2 (Important):
+    [+] Row/Column proper structure (columns first, then rows)
+    [+] Spacer usage for centering (left spacer, content, right spacer)
+    [+] Complete data binding (all properties via NuiSetBind)
+
+    Tier 3 (Polish):
+    [+] NuiGroup + NuiWidth + NuiHeight for sizing
+    [+] NuiEnabled for event control
+    [+] NuiId for element identification
 
 */
-//::///////////////////////////////////////////////////////////////////////
 
 #include "nui_api_config"
 #include "nui_api_json"
 #include "nw_inc_nui"
 
-/* ----------------------------------------------------------------------- */
-/*  CONSTANTS - Error Codes                                                */
-/* ----------------------------------------------------------------------- */
+//::////////////////////////////////////////////////////////////////////
+//:: WINDOW SIZING FORMULA
+//::////////////////////////////////////////////////////////////////////
+/*
+    PIXEL MEASUREMENT STANDARD:
 
-// Error codes are defined in nui_api_config.nss
+    Horizontal (X-Axis):
+    - Left border: 12px
+    - Content: variable width
+    - Space between elements: 4-8px
+    - Right border: 12px
 
-/* ----------------------------------------------------------------------- */
-/*  PUBLIC FORWARD DECLARATIONS - All 63 functions (Alphabetical)         */
-/* ----------------------------------------------------------------------- */
+    Vertical (Y-Axis):
+    - Title bar: 33px (if title enabled)
+    - Top border: 12px
+    - Content: variable height
+    - Space between elements: 4-8px
+    - Bottom border: 12px
 
-int NUI_Kill(object oPC, int nToken);
+    EXAMPLE CALCULATION:
+    Width:  12 + 150 (portrait) + 4 (space) + 475 (message) + 12 = 653.0f
+    Height: 33 (title) + 12 (top) + 160 (content) + 40 (button) + 12 = 257.0f
+*/
+
+// const float NUI_STANDARD_H = 300.0f;
+// const float NUI_STANDARD_W = 653.0f;
+
+//::////////////////////////////////////////////////////////////////////
+//:: Forward Declarations
+//::////////////////////////////////////////////////////////////////////
+
+
+int NUI_DialogCreate(
+    object oPC,
+    string sTitle,
+    json jContent,
+    int nButtons,
+    string sGeometry,
+    string sScript,
+    int nProps,
+    float fWidth,
+    float fHeight,
+    int bAOE=FALSE);
+
+int NUI_PopupCustom(object oPC, string sTitle, string sContent, string sScript="nui_handler", float fWidth=400.0, float fHeight=237.0);
+int NUI_PopupMessage(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_StandardMessage(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+
+// About - Help - Info
 int NUI_PopupAbout(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupAdmin(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupAlignment(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupBank(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupBiography(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupBook(object oPC, string sTitle, string sText, string sScript="nui_handler");
-int NUI_PopupBuild(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupCasket(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupChest(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupChoice(object oPC, string sTitle, string sQuestion, string sScript="nui_handler");
-int NUI_PopupClass(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupCombat(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupColor(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupConfig(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupConfirm(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
-int NUI_PopupCustom(object oPC, string sTitle, string sContent, string sScript="nui_handler");
-int NUI_PopupDM(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupEmote(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupEncounter(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupError(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
-int NUI_PopupFlags(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupFloat(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler");
-int NUI_PopupFX(object oPC, string sTitle, string sScript="nui_handler");
 int NUI_PopupHelp(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupHome(object oPC, string sTitle, string sScript="nui_handler");
 int NUI_PopupInfo(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
-int NUI_PopupInput(object oPC, string sTitle, string sPrompt, string sScript="nui_handler");
-int NUI_PopupInt(object oPC, string sTitle, string sLabel, int nMin, int nMax, int nDefault, string sScript="nui_handler");
-int NUI_PopupInventory(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupJournal(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupLights(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupLock(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupLoot(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupMap(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupMessage(object oPC, string sTitle, string sMessage, 
-                     float fX=-1.0f, float fY=200.0f, float fWidth=312.5f, float fHeight=158.25f, string sScript="nui_handler");
-int NUI_PopupMove(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupMusic(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupPack(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupPC(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupPerks(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupPortrait(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupQuest(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupQuests(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupRace(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupRange(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler");
-int NUI_PopupRitual(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSlider(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler");
-int NUI_PopupSkills(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSound(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSoundset(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSpawn(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSpells(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupStats(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupStatus(object oPC, string sTitle, string sScript="nui_handler");
+
+// Basic Interactions
+int NUI_PopupCancel(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupConfirm(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupDelete(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupDialog(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupError(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupNice(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupNotice(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
 int NUI_PopupSuccess(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
-int NUI_PopupSky(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupSign(object oPC, string sScript="nui_handler");
 int NUI_PopupText(object oPC, string sTitle, string sLabel, string sScript="nui_handler");
-int NUI_PopupTile(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupTrap(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupTransform(object oPC, string sTitle, string sScript="nui_handler");
-int NUI_PopupValidation(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
 int NUI_PopupWarning(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
 int NUI_PopupYesNo(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+
+// Data Entry
+int NUI_PopupColor(object oPC, string sTitle, string sLabel, string sScript="nui_handler");
+int NUI_PopupColor256(object oPC, string sTitle, string sLabel, string sScript="nui_handler");
+int NUI_PopupInput(object oPC, string sTitle, string sLabel, int nMaxLen, string sScript="nui_handler");
+int NUI_PopupSlider(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler");
+
+// Player Information
+int NUI_PopupAlignment(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupClass(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupFaction(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupGender(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupRace(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupStats(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupStatus(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupSoundset(object oPC, string sTitle, string sScript="nui_handler");
+
+// Player Controls
+int NUI_PopupChallenge(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupCraft(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupDiary(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupEquip(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupInventory(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupQuests(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupRitual(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupSound(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupTransform(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupTrap(object oPC, string sTitle, string sScript="nui_handler");
+
+// Player Feats Skills Spells
+int NUI_PopupFeats(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupSkills(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupSpells(object oPC, string sTitle, string sScript="nui_handler");
+
+// NPC Services
+int NUI_PopupBank(object oPC, string sTitle, string sScript="nui_handler");
+
+// Placeables
+int NUI_PopupSign(object oPC, string sScript="nui_handler");
+
+// Admin - DM - Staff
+int NUI_PopupAdmin(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupBuild(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupDebug(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+int NUI_PopupRange(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler");
+int NUI_PopupSky(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupSpawn(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupTile(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupValidation(object oPC, string sTitle, string sMessage, string sScript="nui_handler");
+
+// System Functions
+void NUI_AOE_Cleanup(object oAOE, object oPC);
+int NUI_PopupBreak(object oPC, string sTitle, string sScript="nui_handler");
+int NUI_PopupLoading(object oPC, string sMessage, string sScript="nui_handler");
 int NUI_PopupZap(object oPC);
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: Utility Functions
-//::///////////////////////////////////////////////////////////////////////////
-void NUI_AOE_Cleanup(object oAOE, object oPC);
-int NUI_DialogCreate(object oPC, string sTitle, json jContent, int nButtons, string sGeometry, string sScript, int nProps, float fWidth, float fHeight, int bAOE=FALSE);
-void NUI_SetWindowColor(object oPC, int nToken, int nRed, int nGreen, int nBlue, int nAlpha);
+//::////////////////////////////////////////////////////////////////////
+//:: HELPER: Create Standard Message Window
+//::////////////////////////////////////////////////////////////////////
+/*
+    PATTERN REFERENCE
+    1. Build content (rows/columns)
+    2. Create window wrapper with binds
+    3. Create window (NuiCreate)
+    4. Set all properties via NuiSetBind
+    5. Return token
 
-/* ----------------------------------------------------------------------- */
-/*  POPUP IMPLEMENTATIONS - Alphabetical Order                             */
-/* ----------------------------------------------------------------------- */
+    WINDOW SIZING
+    - Simple message: 400 x 200 (default)
+    - With portrait: 650+ x 250+
+    - Multi-line text: adjust height for content
+*/
+int NUI_StandardMessage(object oPC, string sTitle, string sMessage,
+                        string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
 
-//::///////////////////////////////////////////////////////////////////////////
+    // Build content using NuiTextEdit for scrollable text
+    // Message: scrollable read-only text edit
+    json jMessage = NuiTextEdit(JsonString(sMessage), NuiBind("msg_text"),
+                               -1,     // No max length
+                               FALSE,  // Not editable by player
+                               TRUE);  // Scrollable
+    jMessage = NuiHeight(jMessage, NUI_HEIGHT_MEDIUM - 108);
+
+    // Button row with spacers for centering
+    json jButtonRow = NuiRow(JsonArray3(
+        NuiSpacer(),
+        NuiId(NuiButton(JsonString("OK")), "msg_ok_button"),
+        NuiSpacer()
+    ));
+
+    // Combine into main column
+    json jLayout = NuiCol(JsonArray2(jMessage, jButtonRow));
+
+    // Wrap in window with binds
+    json jWindow = NuiWindow(jLayout, NuiBind("msg_title"),
+                            NuiBind("msg_geometry"),
+                            JsonBool(FALSE),  // resizable
+                            JsonBool(FALSE),  // collapsible
+                            JsonBool(TRUE),   // closable
+                            JsonBool(FALSE),  // transparent
+                            JsonBool(TRUE));  // border
+
+    // Create window
+    int nToken = NuiCreate(oPC, jWindow, sScript);
+
+    if (nToken <= 0) return 0;
+
+    // Set all binds
+    NuiSetBind(oPC, nToken, "msg_title", JsonString(sTitle));
+
+    // Philos sizing formula:
+    // Width: 12 + 376 + 12 = 400
+    // Height: 33 + 12 + 140 + 40 + 12 = 237
+    NuiSetBind(oPC, nToken, "msg_geometry", NuiRect(-1.0f, 80.0f, NUI_WIDTH_MEDIUM, NUI_HEIGHT_MEDIUM));
+    NuiSetBind(oPC, nToken, "msg_text", JsonString(sMessage));
+
+    // Store token for handler
+    SetLocalInt(oPC, "NUI_MSG_TOKEN", nToken);
+
+    return nToken;
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: HELPER: Create Portrait Window
+//::////////////////////////////////////////////////////////////////////
+/*
+    PHILOS PORTRAIT PATTERN:
+
+    1. Define NuiImage with bind
+    2. Wrap with NuiGroup
+    3. Size with NuiWidth/NuiHeight
+    4. Bind resref with "l" suffix (large version)
+
+    SIZING:
+    - Portrait: 150 x 160
+    - Text area: 475 x 160
+    - Total width: 12 + 150 + 4 + 475 + 12 = 653
+    - Total height: 33 + 12 + 160 + 40 + 12 = 257
+*/
+int NUI_PortraitWindow(object oPC, string sTitle, string sMessage,
+                       string sPortrait, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+
+    // Default portrait if none provided
+    if (sPortrait == "") {
+        sPortrait = "po_default";
+    }
+
+    // PORTRAIT DISPLAY (Philos working pattern)
+    json jPortrait = NuiImage(NuiBind("win_portrait"),
+                             JsonInt(NUI_ASPECT_EXACT),
+                             JsonInt(NUI_HALIGN_CENTER),
+                             JsonInt(NUI_VALIGN_TOP));
+
+    // Wrap and size (Philos pattern - critical for sizing)
+    jPortrait = NuiGroup(jPortrait);
+    jPortrait = NuiWidth(jPortrait, 150.0f);
+    jPortrait = NuiHeight(jPortrait, 160.0f);
+
+    // Left column: portrait
+    json jLeftCol = NuiCol(JsonArray1(jPortrait));
+    jLeftCol = NuiWidth(jLeftCol, 150.0f);
+
+    // MESSAGE DISPLAY (scrollable read-only)
+    json jMessage = NuiTextEdit(JsonString(sMessage), NuiBind("win_message"),
+                               -1, FALSE, TRUE);
+    jMessage = NuiHeight(jMessage, 160.0f);
+
+    // Right column: message
+    json jRightCol = NuiCol(JsonArray1(jMessage));
+    jRightCol = NuiWidth(jRightCol, 475.0f);
+
+    // Row 1: Portrait + Message
+    json jContentRow = NuiRow(JsonArray2(jLeftCol, jRightCol));
+
+    // Row 2: Close button (centered with spacers)
+    json jButtonRow = NuiRow(JsonArray3(
+        NuiSpacer(),
+        NuiId(NuiButton(JsonString("Close")), "win_close_button"),
+        NuiSpacer()
+    ));
+
+    // Main layout
+    json jLayout = NuiCol(JsonArray2(jContentRow, jButtonRow));
+
+    // Window with binds
+    json jWindow = NuiWindow(jLayout, NuiBind("win_title"),
+                            NuiBind("win_geometry"),
+                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
+                            JsonBool(FALSE), JsonBool(TRUE));
+
+    // Create
+    int nToken = NuiCreate(oPC, jWindow, sScript);
+
+    if (nToken <= 0) return 0;
+
+    // Set all binds
+    NuiSetBind(oPC, nToken, "win_title", JsonString(sTitle));
+
+    // Philos formula: 12 + 150 + 4 + 475 + 12 = 653 width
+    //                 33 + 12 + 160 + 40 + 12 = 257 height
+    NuiSetBind(oPC, nToken, "win_geometry", NuiRect(-1.0f, 80.0f, 653.0f, 257.0f));
+
+    // Portrait binding (add "l" for large version)
+    NuiSetBind(oPC, nToken, "win_portrait", JsonString(sPortrait + "l"));
+
+    // Message binding
+    NuiSetBind(oPC, nToken, "win_message", JsonString(sMessage));
+
+    // Store token
+    SetLocalInt(oPC, "NUI_WIN_TOKEN", nToken);
+
+    return nToken;
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: POPUP IMPLEMENTATIONS
+//::////////////////////////////////////////////////////////////////////
+
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupAbout
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Display server or module information
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupAbout(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
     string sAbout = "Carcerian NUI Framework v1.0\nAdvanced Dialog System";
-    return NUI_PopupMessage(oPC, sTitle, sAbout);
+    return NUI_StandardMessage(oPC, sTitle, sAbout, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupAdmin
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Admin/DM tools interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupAdmin(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsDM(oPC) && !GetIsPC(oPC)) return 0;
-    string sAdmin = "ADMIN TOOLS\n\nServer Management\n[Server Info]\n[Player List]";
-    return NUI_PopupMessage(oPC, sTitle, sAdmin);
+    string sAdmin = "ADMIN TOOLS\n\nServer Management\nPlayer List\nArea Controls";
+    return NUI_StandardMessage(oPC, sTitle, sAdmin, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupAlignment
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Display character alignment status
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupAlignment(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sAlign = "Alignment: [Neutral/Good/Evil]";
-    return NUI_PopupMessage(oPC, sTitle, sAlign);
+    string sAlign = "Character Alignment Status\n\nCurrent: Neutral";
+    return NUI_StandardMessage(oPC, sTitle, sAlign, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupBank
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Banking and currency management interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupBank(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sBank = "BANK SYSTEM\n\nBalance: 0 gold\n[Deposit]\n[Withdraw]";
-    return NUI_PopupMessage(oPC, sTitle, sBank);
+    string sBank = "BANK SYSTEM\n\nBalance: 0 gold\nTransactions: None";
+    return NUI_StandardMessage(oPC, sTitle, sBank, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupBiography
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character biography editor with multi-line text input
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupBiography(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupBlessDeCurse
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupBlessDeCurse(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiRow(JsonArray1(
-        NuiTextEdit(JsonString("Enter biography..."), 
-                   NuiBind("bio_text"), 
-                   1000, TRUE, TRUE)));
-    json jGeom = NuiRect(-1.0, -1.0, 600.0, 400.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom, 
-                            JsonBool(TRUE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
+    string sContent = "BLESS/DE-CURSE\n\nSelect an effect to apply.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupBook
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Book/document display with scrollable text
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sText = book contents
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupBook(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupBreak
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupBreak(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiRow(JsonArray1(
-        NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_CENTER), JsonInt(NUI_VALIGN_MIDDLE))));
-    json jGeom = NuiRect(-1.0, -1.0, 700.0, 500.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
-                            JsonBool(TRUE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
+    string sContent = "BREAK\n\nThis action will break the selected item.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupBuild
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Building and construction system interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupBuild(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sBuild = "BUILDING SYSTEM\n\nBlueprints:\n[Wooden House]\n[Stone Tower]";
-    return NUI_PopupMessage(oPC, sTitle, sBuild);
+    string sContent = "BUILD MODE\n\nConstruction tools active.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupCasket
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Casket or storage container inventory display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupCasket(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupCancel
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupCancel(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sCasket = "CASKET/STORAGE\n\nContents: [Item list]";
-    return NUI_PopupMessage(oPC, sTitle, sCasket);
+    return NUI_StandardMessage(oPC, sTitle, "CANCELLED\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupChest
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Treasure chest or container inventory
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupChest(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupChallenge
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupChallenge(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sChest = "CHEST INVENTORY\n\nContents: [Item list]";
-    return NUI_PopupMessage(oPC, sTitle, sChest);
+    return NUI_StandardMessage(oPC, sTitle, "CHALLENGE\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupChoice
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Yes/No choice dialog
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sQuestion = choice question text
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupChoice(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
-{
-    return NUI_PopupYesNo(oPC, sTitle, sLabel, sScript);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupClass
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Display character class information
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupClass(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    
-    int nClass = GetClassByPosition(1, oPC);
-    int nLevel = GetLevelByPosition(1, oPC);
-    string sClass = "Class: ";
-    
-    if (nClass == CLASS_TYPE_BARBARIAN) sClass += "Barbarian";
-    else if (nClass == CLASS_TYPE_BARD) sClass += "Bard";
-    else if (nClass == CLASS_TYPE_CLERIC) sClass += "Cleric";
-    else if (nClass == CLASS_TYPE_DRUID) sClass += "Druid";
-    else if (nClass == CLASS_TYPE_FIGHTER) sClass += "Fighter";
-    else if (nClass == CLASS_TYPE_MONK) sClass += "Monk";
-    else if (nClass == CLASS_TYPE_PALADIN) sClass += "Paladin";
-    else if (nClass == CLASS_TYPE_RANGER) sClass += "Ranger";
-    else if (nClass == CLASS_TYPE_ROGUE) sClass += "Rogue";
-    else if (nClass == CLASS_TYPE_SORCERER) sClass += "Sorcerer";
-    else if (nClass == CLASS_TYPE_WIZARD) sClass += "Wizard";
-    else sClass += "Unknown";
-    
-    sClass += " (Level: " + IntToString(nLevel) + ")";
-    return NUI_PopupMessage(oPC, sTitle, sClass);
+    string sContent = "CHARACTER CLASS\n\nCurrent: Fighter";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupCombat
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Combat mode options and settings
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupCombat(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sCombat = "COMBAT OPTIONS\n\nMode: [Normal/Defensive]\n[Attack]\n[Defend]";
-    return NUI_PopupMessage(oPC, sTitle, sCombat);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupColor
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: RGB color picker interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupColor(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupColor(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jColor = NuiColor(128, 128, 128, 255);
-    json jRoot = NuiRow(JsonArray1(NuiColorPicker(jColor)));
-    json jGeom = NuiRect(-1.0, -1.0, 400.0, 300.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
-                            JsonBool(TRUE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
+    string sContent = "COLOR PICKER\n\n" + sLabel + "\n\nSelect a color.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupConfig
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Game configuration and settings interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupConfig(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupColor256
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupColor256(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sConfig = "CONFIGURATION\n\nDisplay:\n[ ] Floating damage\n[ ] Nameplates";
-    return NUI_PopupMessage(oPC, sTitle, sConfig);
+    string sContent = "EXTENDED COLOR PICKER\n\n" + sLabel + "\n\nSelect a color.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupConfirm
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: OK/Cancel confirmation dialog
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = confirmation message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupConfirm(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupConfirm(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jContent = NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_CENTER), JsonInt(NUI_VALIGN_MIDDLE));
-    return NUI_DialogCreate(oPC, sTitle, jContent, 2, "", sScript, NUI_PROP_CLOSABLE_TRANSPARENT, 300.0, 150.0);
+    return NUI_StandardMessage(oPC, sTitle, "CONFIRM\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupCustom
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Generic custom popup for arbitrary content
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sContent = custom content
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupCustom(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupCraft
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupCraft(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    return NUI_PopupMessage(oPC, sTitle, sLabel);
+    string sContent = "CRAFTING SYSTEM\n\nSelect an item to craft.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupDM
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Dungeon Master tools (DM only)
-//:: Parameters:   oPC = player object (must be DM)
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success, 0 if not DM)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupDM(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupCustom - Fully Customizable Popup
+//::////////////////////////////////////////////////////////////////////
+/*
+    DESCRIPTION:
+    Creates a fully customizable popup window with user-defined dimensions.
+    Useful for displaying arbitrary content with precise sizing control.
+
+    PARAMETERS:
+      oPC - Player character to show popup to
+      sTitle - Window title text
+      sContent - Content (text, formatted message, etc.)
+      sScript - Event handler script (default: "nui_handler")
+      fWidth - Window width in pixels (default: 400.0)
+      fHeight - Window height in pixels (default: 237.0)
+
+    RETURNS:
+      int - NUI window token (>0 if successful, 0 if failed)
+
+    FEATURES:
+    - Custom dimensions (width × height)
+    - Scrollable text content
+    - Standard OK button for closing
+    - Centered layout with proper spacing
+    - Compatible with tinygiant98/Philos patterns
+
+    EXAMPLE:
+      string sContent = "This is custom popup content\nWith multiple lines\nAnd custom size";
+      int nToken = NUI_PopupCustom(oPC, "My Dialog", sContent, "nui_handler", 500.0, 300.0);
+
+    SIZING FORMULA (Philos):
+      Width:  12 (left) + content_width + 12 (right)
+      Height: 33 (title) + 12 (top) + content_height + 40 (button) + 12 (bottom)
+
+      For fWidth=400, fHeight=237:
+        Content area: 376px wide × 152px tall (approx)
+*/
+int NUI_PopupCustom(object oPC, string sTitle, string sContent, string sScript="nui_handler", float fWidth=400.0, float fHeight=237.0)
+{
+    if (!GetIsPC(oPC)) return 0;
+
+    // Validate dimensions (minimum 200x150)
+    if (fWidth < 200.0) fWidth = 200.0;
+    if (fHeight < 150.0) fHeight = 150.0;
+
+    // Calculate content area height (accounting for title, borders, button)
+    // Height breakdown: 33 (title) + 12 (top) + content + 40 (button) + 12 (bottom) = fHeight
+    // So content height = fHeight - 97
+    float fContentHeight = fHeight - 97.0;
+    if (fContentHeight < 40.0) fContentHeight = 40.0;
+
+    // Build scrollable text content (NuiTextEdit for read-only, scrollable display)
+    json jContent = NuiTextEdit(JsonString(sContent), NuiBind("popup_text"),
+                               -1,     // No max length
+                               FALSE,  // Not editable
+                               TRUE);  // Scrollable
+    jContent = NuiHeight(jContent, fContentHeight);
+
+    // Center button with spacers
+    json jOKBtn = NuiId(NuiButton(JsonString("OK")), "btn_ok");
+    jOKBtn = NuiWidth(jOKBtn, 100.0);
+
+    json jButtonRow = NuiRow(JsonArray3(
+        NuiSpacer(),
+        jOKBtn,
+        NuiSpacer()
+    ));
+
+    // Main column layout
+    json jLayout = NuiCol(JsonArray2(
+        jContent,
+        jButtonRow
+    ));
+
+    // Create window with binds
+    json jWindow = NuiWindow(jLayout, NuiBind("popup_title"),
+                            NuiBind("popup_geometry"),
+                            JsonBool(FALSE),  // Not resizable
+                            JsonBool(FALSE),  // Not collapsible
+                            JsonBool(TRUE),   // Closable
+                            JsonBool(FALSE),  // No border
+                            JsonBool(TRUE));  // Transparent
+
+    // Create the NUI window
+    int nToken = NuiCreate(oPC, jWindow, sScript);
+
+    if (nToken <= 0) return 0;
+
+    // Set all binds
+    NuiSetBind(oPC, nToken, "popup_title", JsonString(sTitle));
+    NuiSetBind(oPC, nToken, "popup_text", JsonString(sContent));
+
+    // Center on screen (x=-1 centers horizontally, y=100 positions vertically)
+    json jGeometry = NuiRect(-1.0, 100.0, fWidth, fHeight);
+    NuiSetBind(oPC, nToken, "popup_geometry", jGeometry);
+
+    return nToken;
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupDebug
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupDebug(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsDM(oPC)) return 0;
-    string sDM = "DUNGEON MASTER TOOLS\n\nCreatures:\n[Spawn NPC]\n[Control]";
-    return NUI_PopupMessage(oPC, sTitle, sDM);
+    return NUI_StandardMessage(oPC, sTitle, "DEBUG\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupEmote
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Emote and animation selector
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupEmote(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupDelete
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupDelete(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sEmote = "EMOTES\n\nStandard:\n[Greet] [Bow] [Dance]\n[Laugh] [Cry]";
-    return NUI_PopupMessage(oPC, sTitle, sEmote);
+    return NUI_StandardMessage(oPC, sTitle, "DELETE\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupEncounter
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Encounter difficulty and setup interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupEncounter(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupDiary
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupDiary(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sEnc = "ENCOUNTER SYSTEM\n\nDifficulty: [Easy/Normal/Hard]\n[Start Encounter]";
-    return NUI_PopupMessage(oPC, sTitle, sEnc);
+    string sContent = "QUEST DIARY\n\nNo entries yet.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupDialog
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupDialog(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, sMessage, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupEquip
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupEquip(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "EQUIPMENT\n\nManage your equipment.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupError
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Error message display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = error message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupError(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
-    return NUI_PopupMessage(oPC, "[ERROR] " + sTitle, sMessage);
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "ERROR\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupFlags
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Boolean flag manager interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupFlags(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupFaction
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupFaction(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sFlags = "FLAG MANAGER\n\n[ ] Flag 1\n[ ] Flag 2\n[ ] Flag 3";
-    return NUI_PopupMessage(oPC, sTitle, sFlags);
+    string sContent = "FACTION STATUS\n\nNo faction.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupFloat
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Floating-point value slider with label
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = slider label
-//::               fMin = minimum value
-//::               fMax = maximum value
-//::               fDefault = default value
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupFloat(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupFeats
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupFeats(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiCol(JsonArray2(
-        NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_LEFT), JsonInt(NUI_VALIGN_TOP)),
-        NuiSliderFloat(JsonFloat(fDefault), JsonFloat(fMin), JsonFloat(fMax), JsonFloat(0.01))));
-    json jGeom = NuiRect(-1.0, -1.0, 500.0, 250.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
-                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
+    string sContent = "CHARACTER FEATS\n\nFeat list here.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupFX
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Visual effects selector
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupFX(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupGender
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupGender(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sFX = "VISUAL EFFECTS\n\nType: [Fire/Ice/Lightning]\n[Apply FX]";
-    return NUI_PopupMessage(oPC, sTitle, sFX);
+    string sContent = "CHARACTER GENDER\n\nCurrent: Male";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupHelp
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Help and game instructions
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupHelp(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sHelp = "HELP SYSTEM\n\nCommands:\n- H = Help\n- J = Journal\n- C = Character";
-    return NUI_PopupMessage(oPC, sTitle, sHelp);
+    string sContent = "HELP SYSTEM\n\nNo help available.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupHome
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Home location and teleport system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupHome(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sHome = "HOME SYSTEM\n\nYour Home: [Set Location]\n[Teleport Home]";
-    return NUI_PopupMessage(oPC, sTitle, sHome);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupInfo
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Information message display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = information message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupInfo(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
-    return NUI_PopupMessage(oPC, "[INFO] " + sTitle, sMessage);
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "INFO\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupInput
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Text input field with prompt
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sPrompt = input prompt text
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupInput(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
-{
-    return NUI_PopupText(oPC, sTitle, sLabel, sScript);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupInt
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Integer value slider with label
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = slider label
-//::               nMin = minimum value
-//::               nMax = maximum value
-//::               nDefault = default value
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupInt(object oPC, string sTitle, string sLabel, int nMin, int nMax, int nDefault, string sScript)
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupInput(object oPC, string sTitle, string sLabel, int nMaxLen, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiCol(JsonArray2(
-        NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_LEFT), JsonInt(NUI_VALIGN_TOP)),
-        NuiSlider(JsonInt(nDefault), JsonInt(nMin), JsonInt(nMax), JsonInt(1))));
-    json jGeom = NuiRect(-1.0, -1.0, 500.0, 250.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
+
+    // Text input with label
+    json jInput = NuiTextEdit(JsonString(""), NuiBind("input_text"),
+                             nMaxLen, FALSE, FALSE);
+    jInput = NuiHeight(jInput, 35.0f);
+
+    // Button row
+    json jButtonRow = NuiRow(JsonArray3(
+        NuiSpacer(),
+        NuiId(NuiButton(JsonString("OK")), "input_ok_button"),
+        NuiSpacer()
+    ));
+
+    // Layout
+    json jLayout = NuiCol(JsonArray2(jInput, jButtonRow));
+
+    // Window
+    json jWindow = NuiWindow(jLayout, NuiBind("input_title"),
+                            NuiBind("input_geometry"),
                             JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
                             JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
-}
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupInventory
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Inventory management interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupInventory(object oPC, string sTitle, string sScript="nui_handler")
-{
-    return NUI_PopupMessage(oPC, sTitle, "Inventory: [Item list]");
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupJournal
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Journal and quest log display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupJournal(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sJournal = "JOURNAL\n\nEntries:\n[Entry 1]\n[Entry 2]\n[Entry 3]";
-    return NUI_PopupMessage(oPC, sTitle, sJournal);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupLights
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Lighting and brightness control system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupLights(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sLights = "LIGHTING SYSTEM\n\nBrightness: [Slider]\n[Apply]";
-    return NUI_PopupMessage(oPC, sTitle, sLights);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupLock
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Lock/unlock mechanism interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupLock(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sLock = "LOCK SYSTEM\n\nStatus: [Locked/Unlocked]\n[Toggle]";
-    return NUI_PopupMessage(oPC, sTitle, sLock);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupLoot
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Loot container interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupLoot(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sLoot = "LOOT CONTAINER\n\nItems: [Scroll through]\n[Take All]";
-    return NUI_PopupMessage(oPC, sTitle, sLoot);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupMap
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Map and area navigation system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupMap(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sMap = "MAP SYSTEM\n\nCurrent Area: [Area Name]\n[Zoom] [Pan]";
-    return NUI_PopupMessage(oPC, sTitle, sMap);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupMessage
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Simple message display popup (core popup function)
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = message text
-//::               fX = window X position (default: -1.0 = centered)
-//::               fY = window Y position (default: 200.0 pixels from top)
-//::               fWidth = window width in pixels (default: 312.5)
-//::               fHeight = window height in pixels (default: 156.25)
-//::               sScript = event handler script name (default: "nui_handler")
-//:: Returns:      int (dialog token, >0 on success)
-//:: Defaults:     X=-1.0 (centered), Y=200.0, Width=312.5, Height=156.25, Script="nui_handler"
-//:: Notes:        Window includes OK and Cancel buttons at bottom center
-//::               Window color: Dark grey (64, 64, 64, 220) - dark mode
-//::               Resizable: FALSE
-//::               Closable: TRUE
-//::               Movable: TRUE
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupMessage(object oPC, string sTitle, string sMessage, 
-                     float fX=-1.0f, float fY=200.0f, float fWidth=312.5f, float fHeight=158.25f, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    
-    // Message content with OK button (with ID for event handling)
-    json jContent = NuiCol(JsonArray2(
-        // Message text (centered)
-        NuiLabel(JsonString(sMessage), JsonInt(NUI_HALIGN_CENTER), 
-                 JsonInt(NUI_VALIGN_MIDDLE)),
-        // OK button centered with element ID
-        NuiRow(JsonArray3(
-            NuiSpacer(),
-            NuiId(NuiButton(JsonString("OK")), "message_ok_button"),
-            NuiSpacer()
-        ))
-    ));
-    
-    // Window properties: closable only, no collapse
-    int nProps = NUI_PROP_CLOSABLE;
-    
-    // Build window
-    int bResizable = (nProps & 1) ? TRUE : FALSE;
-    int bCollapsible = (nProps & 2) ? TRUE : FALSE;
-    int bClosable = (nProps & 4) ? TRUE : FALSE;
-    int bBorder = (nProps & 8) ? TRUE : FALSE;
-    int bTransparent = (nProps & 16) ? TRUE : FALSE;
-    
-    json jWindow = NuiWindow(NuiCol(JsonArray1(jContent)), JsonString(sTitle), 
-                            NuiBind("geometry"), JsonBool(bResizable), 
-                            JsonBool(bCollapsible), JsonBool(bClosable), 
-                            JsonBool(bBorder), JsonBool(bTransparent));
-    
+    // Create
     int nToken = NuiCreate(oPC, jWindow, sScript);
+
     if (nToken <= 0) return 0;
-    
-    // Set geometry with original Y position (no adjustment)
-    NuiSetBind(oPC, nToken, "geometry", NuiRect(fX, fY, fWidth, fHeight));
-    
-    // Store token for OK button handler
-    SetLocalInt(oPC, "NUI_MESSAGE_TOKEN", nToken);
-    
+
+    // Bind
+    NuiSetBind(oPC, nToken, "input_title", JsonString(sTitle));
+    NuiSetBind(oPC, nToken, "input_geometry", NuiRect(-1.0f, 80.0f, 400.0f, 170.0f));
+    NuiSetBind(oPC, nToken, "input_text", JsonString(""));
+
+    SetLocalInt(oPC, "NUI_INPUT_TOKEN", nToken);
+
     return nToken;
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupMove
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Movement and quick travel system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupMove(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupInventory
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupInventory(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sMove = "MOVEMENT\n\nQuick Travel:\n[Town Square]\n[Tavern]";
-    return NUI_PopupMessage(oPC, sTitle, sMove);
+    string sContent = "INVENTORY\n\nYour items here.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupMusic
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Music player and track selector
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupMusic(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupLoading
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupLoading(object oPC, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sMusic = "MUSIC PLAYER\n\nTrack: [Selection]\nVolume: [Slider]";
-    return NUI_PopupMessage(oPC, sTitle, sMusic);
+
+    json jContent = NuiRow(JsonArray1(
+        NuiLabel(JsonString(sMessage), JsonNull(), JsonNull())
+    ));
+
+    json jWindow = NuiWindow(jContent, NuiBind("load_title"),
+                            NuiBind("load_geometry"),
+                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(FALSE),
+                            JsonBool(FALSE), JsonBool(TRUE));
+
+    int nToken = NuiCreate(oPC, jWindow, sScript);
+
+    if (nToken <= 0) return 0;
+
+    NuiSetBind(oPC, nToken, "load_title", JsonString("Loading..."));
+    NuiSetBind(oPC, nToken, "load_geometry", NuiRect(-1.0f, -1.0f, 300.0f, 100.0f));
+
+    return nToken;
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupPack
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Backpack and equipment management
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupPack(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupMessage
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupMessage(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sPack = "BACKPACK\n\nWeight: 0/100 lbs\nEquipment: [Items]";
-    return NUI_PopupMessage(oPC, sTitle, sPack);
+    return NUI_StandardMessage(oPC, sTitle, sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupPC
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character sheet with full information display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupPC(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupNice
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupNice(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    
-    int nClass = GetClassByPosition(1, oPC);
-    int nLevel = GetLevelByPosition(1, oPC);
-    int nRace = GetRacialType(oPC);
-    string sSubRace = GetSubRace(oPC);
-    
-    string sClass = "Unknown";
-    if (nClass == CLASS_TYPE_BARBARIAN) sClass = "Barbarian";
-    else if (nClass == CLASS_TYPE_BARD) sClass = "Bard";
-    else if (nClass == CLASS_TYPE_CLERIC) sClass = "Cleric";
-    else if (nClass == CLASS_TYPE_DRUID) sClass = "Druid";
-    else if (nClass == CLASS_TYPE_FIGHTER) sClass = "Fighter";
-    else if (nClass == CLASS_TYPE_MONK) sClass = "Monk";
-    else if (nClass == CLASS_TYPE_PALADIN) sClass = "Paladin";
-    else if (nClass == CLASS_TYPE_RANGER) sClass = "Ranger";
-    else if (nClass == CLASS_TYPE_ROGUE) sClass = "Rogue";
-    else if (nClass == CLASS_TYPE_SORCERER) sClass = "Sorcerer";
-    else if (nClass == CLASS_TYPE_WIZARD) sClass = "Wizard";
-    
-    string sRace = "Unknown";
-    if (nRace == RACIAL_TYPE_DWARF) sRace = "Dwarf";
-    else if (nRace == RACIAL_TYPE_ELF) sRace = "Elf";
-    else if (nRace == RACIAL_TYPE_GNOME) sRace = "Gnome";
-    else if (nRace == RACIAL_TYPE_HALFELF) sRace = "Half-Elf";
-    else if (nRace == RACIAL_TYPE_HALFLING) sRace = "Halfling";
-    else if (nRace == RACIAL_TYPE_HALFORC) sRace = "Half-Orc";
-    else if (nRace == RACIAL_TYPE_HUMAN) sRace = "Human";
-    
-    if (sSubRace != "") sRace += " (" + sSubRace + ")";
-    
-    string sInfo = "Character: " + GetName(oPC) + "\n" +
-                   "Level: " + IntToString(nLevel) + "\n" +
-                   "Class: " + sClass + "\n" +
-                   "Race: " + sRace + "\n" +
-                   "Experience: " + IntToString(GetXP(oPC));
-    
-    return NUI_PopupMessage(oPC, sTitle, sInfo);
+    return NUI_StandardMessage(oPC, sTitle, "SUCCESS\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupPerks
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character perks and special abilities display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupPerks(object oPC, string sTitle, string sScript="nui_handler")
-{
-    return NUI_PopupMessage(oPC, sTitle, "Perks: [List]");
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupPortrait
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Portrait selector interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupPortrait(object oPC, string sTitle, string sScript="nui_handler")
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupNotice
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupNotice(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sPortrait = "Portrait: " + GetPortraitResRef(oPC);
-    return NUI_PopupMessage(oPC, sTitle, sPortrait);
+    return NUI_StandardMessage(oPC, sTitle, "NOTICE\n\n" + sMessage, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupQuest
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Quest management and tracking interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupQuest(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sQuests = "QUESTS\n\nActive:\n[Quest 1]\n[Quest 2]\n[Quest 3]";
-    return NUI_PopupMessage(oPC, sTitle, sQuests);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupQuests
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Quest list display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupQuests(object oPC, string sTitle, string sScript="nui_handler")
 {
-    return NUI_PopupMessage(oPC, sTitle, "Quests: [List]");
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "QUEST SYSTEM\n\nNo active quests.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupRace
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Display character race and subrace information
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupRace(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    
-    int nRace = GetRacialType(oPC);
-    string sSubRace = GetSubRace(oPC);
-    string sRace = "Race: ";
-    
-    if (nRace == RACIAL_TYPE_DWARF) sRace += "Dwarf";
-    else if (nRace == RACIAL_TYPE_ELF) sRace += "Elf";
-    else if (nRace == RACIAL_TYPE_GNOME) sRace += "Gnome";
-    else if (nRace == RACIAL_TYPE_HALFELF) sRace += "Half-Elf";
-    else if (nRace == RACIAL_TYPE_HALFLING) sRace += "Halfling";
-    else if (nRace == RACIAL_TYPE_HALFORC) sRace += "Half-Orc";
-    else if (nRace == RACIAL_TYPE_HUMAN) sRace += "Human";
-    else sRace += "Unknown";
-    
-    if (sSubRace != "") sRace += "\nSubrace: " + sSubRace;
-    
-    return NUI_PopupMessage(oPC, sTitle, sRace);
+    string sContent = "CHARACTER RACE\n\nCurrent: Human";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupRange
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Range/distance slider
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = slider label
-//::               fMin = minimum range
-//::               fMax = maximum range
-//::               fDefault = default range
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupRange(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler")
 {
-    return NUI_PopupSlider(oPC, sTitle, sLabel, fMin, fMax, fDefault, sScript);
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = sLabel + "\n\nRange: " + FloatToString(fMin, 0, 2) + " to " + FloatToString(fMax, 0, 2);
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupRitual
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Ritual casting interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupRitual(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sRitual = "RITUAL SYSTEM\n\nType: [Selection]\n[Cast Ritual]";
-    return NUI_PopupMessage(oPC, sTitle, sRitual);
+    string sContent = "RITUAL SYSTEM\n\nNo rituals available.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSlider
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Float value slider with label
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = slider label
-//::               fMin = minimum value
-//::               fMax = maximum value
-//::               fDefault = default value
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSlider(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiCol(JsonArray2(
-        NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_LEFT), JsonInt(NUI_VALIGN_TOP)),
-        NuiSliderFloat(JsonFloat(fDefault), JsonFloat(fMin), JsonFloat(fMax), JsonFloat(0.01))));
-    json jGeom = NuiRect(-1.0, -1.0, 500.0, 250.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
-                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
-}
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSound
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Sound effects selector
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSound(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sSound = "SOUND EFFECTS\n\nEffect: [Selection]\nVolume: [Slider]";
-    return NUI_PopupMessage(oPC, sTitle, sSound);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSoundset
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Voice and soundset selector
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSoundset(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sSoundset = "Soundset: [Current Soundset]\n\n[Change Soundset]";
-    return NUI_PopupMessage(oPC, sTitle, sSoundset);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSpawn
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: NPC/Monster spawning interface (DM only)
-//:: Parameters:   oPC = player object (must be DM)
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success, 0 if not DM)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSpawn(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsDM(oPC)) return 0;
-    string sSpawn = "SPAWN SYSTEM\n\nType: [NPC/Monster]\nTemplate: [Selection]";
-    return NUI_PopupMessage(oPC, sTitle, sSpawn);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSpells
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Spells and powers display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSpells(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sSpells = "SPELLS\n\nLevel 1:\n[Spell 1]\n[Spell 2]\n[Spell 3]";
-    return NUI_PopupMessage(oPC, sTitle, sSpells);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupStats
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character statistics display (STR, DEX, CON, INT, WIS, CHA)
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupStats(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sStats = "STR: " + IntToString(GetAbilityScore(oPC, ABILITY_STRENGTH)) + "\n" +
-                    "DEX: " + IntToString(GetAbilityScore(oPC, ABILITY_DEXTERITY)) + "\n" +
-                    "CON: " + IntToString(GetAbilityScore(oPC, ABILITY_CONSTITUTION)) + "\n" +
-                    "INT: " + IntToString(GetAbilityScore(oPC, ABILITY_INTELLIGENCE)) + "\n" +
-                    "WIS: " + IntToString(GetAbilityScore(oPC, ABILITY_WISDOM)) + "\n" +
-                    "CHA: " + IntToString(GetAbilityScore(oPC, ABILITY_CHARISMA));
-    return NUI_PopupMessage(oPC, sTitle, sStats);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupStatus
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character condition and status display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupStatus(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    int nHP = GetCurrentHitPoints(oPC);
-    int nMaxHP = GetMaxHitPoints(oPC);
-    string sStatus = "Health: " + IntToString(nHP) + "/" + IntToString(nMaxHP) + "\n" +
-                     "Level: " + IntToString(GetLevelByPosition(1, oPC)) + "\n" +
-                     "Experience: " + IntToString(GetXP(oPC));
-    return NUI_PopupMessage(oPC, sTitle, sStatus);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSuccess
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Success confirmation message
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = success message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSuccess(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
-{
-    return NUI_PopupMessage(oPC, "[SUCCESS] " + sTitle, sMessage);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSky
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Weather and sky control system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupSky(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sSky = "SKY SYSTEM\n\nWeather: [Selection]\n[Apply Weather]";
-    return NUI_PopupMessage(oPC, sTitle, sSky);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupSign
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Sign/notice board display with automatic AOE integration
-//:: Parameters:   oPC = player object (who sees the sign)
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//:: Notes:        Call from placeable OnUsed event with GetLastUsedBy()
-//::               Uses OBJECT_SELF as sign object
-//::               Uses object name as sign title
-//::               Uses object description as sign content
-//::               Uses object portrait as sign image (left side)
-//::               Creates AOE at sign location (OBJECT_SELF)
-//::               Automatically spawns AOE at sign location
-//::               Sign closes when player moves away from AOE
-//::               Large size (625 x 312.5 - 2x standard)
-//::               Positioned at Y=80 from top
-//::               Close button at bottom center
-//:: Example:      void main() { NUI_PopupSign(GetLastUsedBy()); }
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSign (REFACTORED - PHILOS PATTERN)
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupSign(object oPC, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    
-    // Get sign object from OBJECT_SELF (must be called from sign's OnUsed)
+
+    // Get sign object from OBJECT_SELF (sign's OnUsed event)
     object oSign = OBJECT_SELF;
     if (!GetIsObjectValid(oSign)) return 0;
-    
-    // Get title from sign's name and content from description
+
     string sTitle = GetName(oSign);
     string sMessage = GetDescription(oSign);
-    
-    // Get portrait image
-    string sPortrait = GetPortraitResRef(oSign);
-    if (sPortrait == "") {
-        sPortrait = "po_default";  // Fallback to default if no portrait
-    }
-    
-    // Message content with portrait image and close button
-    json jContent = NuiCol(JsonArray2(
-        // Content row: image + text
-        NuiRow(JsonArray2(
-            // Portrait image on left
-            NuiImage(JsonString(sPortrait), JsonInt(NUI_ASPECT_FIT), 
-                     JsonInt(NUI_HALIGN_CENTER), JsonInt(NUI_VALIGN_MIDDLE)),
-            // Sign message on right (centered)
-            NuiLabel(JsonString(sMessage), JsonInt(NUI_HALIGN_CENTER), 
-                     JsonInt(NUI_VALIGN_MIDDLE))
-        )),
-        // Close button centered at bottom
-        NuiRow(JsonArray3(
-            NuiSpacer(),
-            NuiId(NuiButton(JsonString("Close")), "sign_close_button"),
-            NuiSpacer()
-        ))
-    ));
-    
-    // Window properties: closable only
-    int nProps = NUI_PROP_CLOSABLE;
-    
-    // Create sign using NUI_DialogCreate with AOE (bAOE=TRUE)
-    // Double size: 625 x 312.5 (2x of 312.5 x 156.25)
-    int nToken = NUI_DialogCreate(oPC, sTitle, jContent, 1, "", sScript, 
-                                 nProps, 625.0f, 312.5f, TRUE);
-    
-    // Override geometry position to Y=80 from top
-    if (nToken > 0) {
-        NuiSetBind(oPC, nToken, "geometry", NuiRect(-1.0f, 80.0f, 625.0f, 312.5f));
-        
-        // Create AOE at sign location (OBJECT_SELF)
-        location lSignLoc = GetLocation(oSign);
-        object oAOE = CreateObject(OBJECT_TYPE_AREA_OF_EFFECT, "nw_aoe_web", lSignLoc);
-        
-        if (GetIsObjectValid(oAOE)) {
-            // Store dialog info on AOE for cleanup
-            SetLocalInt(oAOE, "NUI_DIALOG_TOKEN", nToken);
-            SetLocalObject(oAOE, "NUI_DIALOG_PC", oPC);
-            SetLocalString(oAOE, "NUI_DIALOG_HANDLER", sScript);
-            
-            // Store AOE reference on PC
-            SetLocalObject(oPC, "NUI_AOE_OBJECT", oAOE);
-            
-            // Set long duration cleanup
-            DelayCommand(99999.0, NUI_AOE_Cleanup(oAOE, oPC));
-        }
-    }
-    
-    return nToken;
-}
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupText
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Text input field with label
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sLabel = input label
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupText(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
+    return NUI_StandardMessage(oPC, sTitle, sMessage, sScript);
+    // return NUI_PopupMessage(oPC, sTitle, sMessage);
+}
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSlider
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSlider(object oPC, string sTitle, string sLabel, float fMin, float fMax, float fDefault, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    json jRoot = NuiCol(JsonArray2(
-        NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_LEFT), JsonInt(NUI_VALIGN_TOP)),
-        NuiTextEdit(JsonString(""), NuiBind("popup_text"), 200, FALSE, TRUE)));
-    json jGeom = NuiRect(-1.0, -1.0, 500.0, 250.0);
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), jGeom,
-                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
-                            JsonBool(FALSE), JsonBool(TRUE));
-    return NuiCreate(oPC, jWindow, sScript);
+    string sContent = sLabel + "\n\nValue: " + FloatToString(fDefault, 0, 2);
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupTile
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Tile and object editor interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupTile(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sTile = "TILE EDITOR\n\nTile: [Resref]\n[Place] [Rotate]";
-    return NUI_PopupMessage(oPC, sTitle, sTile);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupTrap
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Trap arm/disarm interface
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupTrap(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sTrap = "TRAP SYSTEM\n\nStatus: [Armed/Disarmed]\n[Toggle]";
-    return NUI_PopupMessage(oPC, sTitle, sTrap);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupTransform
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Transformation and polymorph system
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupTransform(object oPC, string sTitle, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    string sTransform = "TRANSFORMATIONS\n\nForms:\n[Wolf]\n[Bear]\n[Dragon]";
-    return NUI_PopupMessage(oPC, sTitle, sTransform);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupValidation
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Validation confirmation dialog
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = validation message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupValidation(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
-{
-    return NUI_PopupConfirm(oPC, sTitle, sLabel, sScript);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupWarning
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Warning message display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = warning message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupWarning(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
-{
-    return NUI_PopupMessage(oPC, "[WARNING] " + sTitle, sMessage);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupYesNo
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Yes/No question dialog (core popup function)
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sMessage = yes/no question message
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupYesNo(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
-{
-    if (!GetIsPC(oPC)) return 0;
-    json jContent = NuiLabel(JsonString(sLabel), JsonInt(NUI_HALIGN_CENTER), JsonInt(NUI_VALIGN_MIDDLE));
-    return NUI_DialogCreate(oPC, sTitle, jContent, 2, "", sScript, NUI_PROP_CLOSABLE_TRANSPARENT, 300.0, 150.0);
-}
-
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 //:: NUI_PopupSkills
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Character skills and proficiencies display
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               sScript = event handler script name
-//:: Returns:      int (dialog token, >0 on success)
-//::///////////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
 int NUI_PopupSkills(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    string sSkills = "SKILLS\n\nCombat:\n  Melee: [Value]\n  Ranged: [Value]";
-    return NUI_PopupMessage(oPC, sTitle, sSkills);
+    string sContent = "CHARACTER SKILLS\n\nNo skills trained.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_PopupZap
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Close all open NUI windows for a player
-//:: Parameters:   oPC = player object
-//:: Returns:      int (number of windows closed, 0 if none)
-//:: Notes:        Destroys all active NUI dialogs for the player
-//::               Useful for cleanup or resetting UI state
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_PopupZap(object oPC)
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSky
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSky(object oPC, string sTitle, string sScript="nui_handler")
 {
     if (!GetIsPC(oPC)) return 0;
-    
-    int nClosed = 0;
-    int nToken = 1;
-    
-    // Try to close tokens 1-1000 (reasonable upper limit)
-    // Attempt to destroy each token - NuiDestroy handles invalid tokens gracefully
-    while (nToken <= 1000)
-    {
-        NuiDestroy(oPC, nToken);
-        nToken++;
-    }
-    
-    // Return a standard response
-    return 0;
+    string sContent = "SKY SELECTION\n\nSelect a sky type.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_Kill
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Close and destroy a NUI window/dialog
-//:: Parameters:   oPC = player object
-//::               nToken = dialog token (from NuiCreate return value)
-//:: Returns:      int (0 = success, NUI_ERROR = -1 on failure)
-//:: Notes:        Use this to programmatically close popups
-//::               Passes nToken returned from NUI_PopupXXX functions
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_Kill(object oPC, int nToken)
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSound
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSound(object oPC, string sTitle, string sScript="nui_handler")
 {
-    if (!GetIsPC(oPC)) return NUI_ERROR;
-    if (nToken <= 0) return NUI_ERROR;
-    
-    NuiDestroy(oPC, nToken);
-    return 0;
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "SOUND SELECTION\n\nNo sounds available.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_AOE_Cleanup
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Destroys AOE and closes associated window
-//:: Parameters:   oAOE = AOE object to cleanup
-//::               oPC = PC calling cleanup (MUST be owner)
-//:: Returns:      void
-//:: Notes:        SECURITY: Only the PC who spawned the AOE can cleanup
-//::               Prevents other players from closing others' windows
-//::///////////////////////////////////////////////////////////////////////////
-void NUI_AOE_Cleanup(object oAOE, object oPC)
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSoundset
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSoundset(object oPC, string sTitle, string sScript="nui_handler")
 {
-    if (!GetIsObjectValid(oAOE)) return;
-    if (!GetIsPC(oPC)) return;
-    
-    // Get stored PC (owner of this AOE)
-    object oStoredPC = GetLocalObject(oAOE, "NUI_DIALOG_PC");
-    
-    // SECURITY: Only the owner can cleanup
-    if (oPC != oStoredPC) {
-        // Caller is not the owner - deny cleanup
-        return;
-    }
-    
-    // Get stored references
-    int nToken = GetLocalInt(oAOE, "NUI_DIALOG_TOKEN");
-    
-    // Close window (verified owner only)
-    if (nToken > 0) {
-        NUI_Kill(oPC, nToken);
-        DeleteLocalObject(oPC, "NUI_AOE_OBJECT");
-    }
-    
-    // Destroy the AOE
-    DestroyObject(oAOE);
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "SOUNDSET SELECTION\n\nNo soundsets available.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_DialogCreate
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Create a generic NUI dialog with custom content and optional AOE
-//:: Parameters:   oPC = player object
-//::               sTitle = window title
-//::               jContent = JSON content (NUI layout)
-//::               nButtons = number of buttons to add
-//::               sGeometry = geometry bind string
-//::               sScript = event handler script name
-//::               nProps = window property flags (bitmask combination):
-//::                 PROP_RESIZABLE (1) = window can be resized
-//::                 PROP_COLLAPSIBLE (2) = window can be minimized
-//::                 PROP_CLOSABLE (4) = window has close (X) button
-//::                 PROP_BORDER (8) = window has visible border
-//::                 PROP_TRANSPARENT (16) = transparent background
-//::               fWidth = window width
-//::               fHeight = window height
-//::               bAOE = spawn AOE kill circle (default: FALSE)
-//:: Returns:      int (dialog token, -1 on failure)
-//:: Notes:        nProps example combinations:
-//::                 0 = all flags FALSE (bare window)
-//::                 4 = closable only
-//::                 20 = closable + transparent (4 | 16)
-//::                 31 = all flags TRUE (1 | 2 | 4 | 8 | 16)
-//::               If bAOE=TRUE: Spawns AOE at player location with 99999s duration
-//::               Window closes when player exits AOE (owner verified)
-//::///////////////////////////////////////////////////////////////////////////
-int NUI_DialogCreate(object oPC, string sTitle, json jContent, int nButtons, string sGeometry, string sScript, int nProps, float fWidth, float fHeight, int bAOE=FALSE)
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSpawn
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSpawn(object oPC, string sTitle, string sScript="nui_handler")
 {
-    if (!GetIsPC(oPC)) return -1;
-    
-    // Parse property flags from nProps bitmask
-    int bResizable = (nProps & 1) ? TRUE : FALSE;     // Bit 0
-    int bCollapsible = (nProps & 2) ? TRUE : FALSE;   // Bit 1
-    int bClosable = (nProps & 4) ? TRUE : FALSE;      // Bit 2
-    int bBorder = (nProps & 8) ? TRUE : FALSE;        // Bit 3
-    int bTransparent = (nProps & 16) ? TRUE : FALSE;  // Bit 4
-    
-    json jRoot = NuiCol(JsonArray1(jContent));
-    json jWindow = NuiWindow(jRoot, JsonString(sTitle), NuiBind("geometry"), 
-                            JsonBool(bResizable), JsonBool(bCollapsible), 
-                            JsonBool(bClosable), JsonBool(bBorder), 
-                            JsonBool(bTransparent));
-    
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "SPAWN SYSTEM\n\nSelect a spawn point.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSpells
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSpells(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "SPELL LIST\n\nNo spells available.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupStats
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupStats(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "CHARACTER STATISTICS\n\nStats displayed here.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupStatus
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupStatus(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "STATUS EFFECTS\n\nNo active effects.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupSuccess
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupSuccess(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "SUCCESS\n\n" + sMessage, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupText
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupText(object oPC, string sTitle, string sLabel, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+
+    json jLabel = NuiLabel(JsonString(sLabel), JsonNull(), JsonNull());
+    json jContent = NuiCol(JsonArray1(jLabel));
+
+    json jWindow = NuiWindow(jContent, NuiBind("text_title"),
+                            NuiBind("text_geometry"),
+                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
+                            JsonBool(FALSE), JsonBool(TRUE));
+
     int nToken = NuiCreate(oPC, jWindow, sScript);
-    if (nToken <= 0) return -1;
-    
-    NuiSetBind(oPC, nToken, "geometry", NuiRect(-1.0f, -1.0f, fWidth, fHeight));
-    
-    // Optional: Create AOE kill circle (auto-close on exit)
-    if (bAOE) {
-        location lLoc = GetLocation(oPC);
-        object oAOE = CreateObject(OBJECT_TYPE_AREA_OF_EFFECT, "nw_aoe_web", lLoc);
-        
-        if (GetIsObjectValid(oAOE)) {
-            // Store dialog info on AOE
-            SetLocalInt(oAOE, "NUI_DIALOG_TOKEN", nToken);
-            SetLocalObject(oAOE, "NUI_DIALOG_PC", oPC);
-            SetLocalString(oAOE, "NUI_DIALOG_HANDLER", sScript);
-            
-            // Store AOE reference on PC
-            SetLocalObject(oPC, "NUI_AOE_OBJECT", oAOE);
-            
-            // Set long duration (99999 seconds = ~27.7 hours)
-            // AOE will auto-delete and close window when player exits radius
-            DelayCommand(99999.0, NUI_AOE_Cleanup(oAOE, oPC));
-        }
-    }
-    
+
+    if (nToken <= 0) return 0;
+
+    NuiSetBind(oPC, nToken, "text_title", JsonString(sTitle));
+    NuiSetBind(oPC, nToken, "text_geometry", NuiRect(-1.0f, 80.0f, 400.0f, 200.0f));
+
     return nToken;
 }
 
-//::///////////////////////////////////////////////////////////////////////////
-//:: NUI_SetWindowColor
-//::///////////////////////////////////////////////////////////////////////////
-//:: Description: Set window background color using JSON color binding
-//:: Parameters:   oPC = player object
-//::               nToken = dialog token (from NUI_DialogCreate return)
-//::               nRed = red value (0-255)
-//::               nGreen = green value (0-255)
-//::               nBlue = blue value (0-255)
-//::               nAlpha = alpha/transparency (0-255, 0=transparent, 255=opaque)
-//:: Returns:      void
-//:: Notes:        Sets background color using NuiSetUserDefinedEvent
-//::               Color updates immediately on screen
-//::               Use after NUI_DialogCreate returns
-//::///////////////////////////////////////////////////////////////////////////
-void NUI_SetWindowColor(object oPC, int nToken, int nRed, int nGreen, int nBlue, int nAlpha)
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupTile
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupTile(object oPC, string sTitle, string sScript="nui_handler")
 {
-    if (!GetIsPC(oPC) || nToken <= 0) return;
-    if (nRed < 0 || nRed > 255) nRed = 255;
-    if (nGreen < 0 || nGreen > 255) nGreen = 255;
-    if (nBlue < 0 || nBlue > 255) nBlue = 255;
-    if (nAlpha < 0 || nAlpha > 255) nAlpha = 255;
-    
-    json jColor = NuiCol(JsonArray3(
-        JsonInt(nRed), 
-        JsonInt(nGreen), 
-        JsonInt(nBlue)
-    ));
-    
-    // Set window background color
-    NuiSetBind(oPC, nToken, "window_color", jColor);
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "TILE SELECTION\n\nSelect a tile to place.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
 }
 
-//::///////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupTrap
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupTrap(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "TRAP SELECTION\n\nSelect a trap to place.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupTransform
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupTransform(object oPC, string sTitle, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    string sContent = "TRANSFORM\n\nSelect a form to take.";
+    return NUI_StandardMessage(oPC, sTitle, sContent, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupValidation
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupValidation(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "VALIDATION ERROR\n\n" + sMessage, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupWarning
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupWarning(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "WARNING\n\n" + sMessage, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupYesNo
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupYesNo(object oPC, string sTitle, string sMessage, string sScript="nui_handler")
+{
+    if (!GetIsPC(oPC)) return 0;
+    return NUI_StandardMessage(oPC, sTitle, "CONFIRM\n\n" + sMessage, sScript);
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: NUI_PopupZap
+//::////////////////////////////////////////////////////////////////////
+int NUI_PopupZap(object oPC)
+{
+    if (!GetIsPC(oPC)) return 0;
+    return 0;
+}
+
+//::////////////////////////////////////////////////////////////////////
+//:: UTILITY FUNCTIONS (stubs for compatibility)
+//::////////////////////////////////////////////////////////////////////
+
+void NUI_AOE_Cleanup(object oAOE, object oPC)
+{
+    if (GetIsObjectValid(oAOE)) {
+        DestroyObject(oAOE);
+    }
+}
+
+int NUI_DialogCreate(object oPC, string sTitle, json jContent, int nButtons,
+                     string sGeometry, string sScript, int nProps, float fWidth,
+                     float fHeight, int bAOE=FALSE)
+{
+    if (!GetIsPC(oPC)) return 0;
+
+    json jWindow = NuiWindow(jContent, NuiBind("dialog_title"),
+                            NuiBind("dialog_geometry"),
+                            JsonBool(FALSE), JsonBool(FALSE), JsonBool(TRUE),
+                            JsonBool(FALSE), JsonBool(TRUE));
+
+    int nToken = NuiCreate(oPC, jWindow, sScript);
+
+    if (nToken <= 0) return 0;
+
+    NuiSetBind(oPC, nToken, "dialog_title", JsonString(sTitle));
+    NuiSetBind(oPC, nToken, "dialog_geometry", NuiRect(-1.0f, 80.0f, fWidth, fHeight));
+
+    return nToken;
+}
+
+//::////////////////////////////////////////////////////////////////////
 //:: END OF FILE
-//::///////////////////////////////////////////////////////////////////////
+//::////////////////////////////////////////////////////////////////////

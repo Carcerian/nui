@@ -210,8 +210,8 @@ int HandleNuiEvent()
     
     // ===== STANDARD BUTTON HANDLING =====
     
-    // Sign Close Button
-    if (sElement == "sign_close_button")
+    // Sign Close Button - respond to mouseup only
+    if (sElement == "sign_close_button" && sEvent == "mouseup")
     {
         int nToken = NuiGetEventWindow();
         if (nToken > 0) {
@@ -220,8 +220,8 @@ int HandleNuiEvent()
         return 1;
     }
     
-    // Message OK Button
-    if (sElement == "message_ok_button")
+    // Message OK Button - respond to mouseup only
+    if (sElement == "message_ok_button" && sEvent == "mouseup")
     {
         int nToken = GetLocalInt(oPC, "NUI_MESSAGE_TOKEN");
         if (nToken > 0) {
@@ -231,8 +231,8 @@ int HandleNuiEvent()
         return 1;
     }
     
-    // OK Button - check if this is a message window
-    if (sElement == "btn_ok")
+    // OK Button - check if this is a message window (mouseup only)
+    if (sElement == "btn_ok" && sEvent == "mouseup")
     {
         int nToken = GetLocalInt(oPC, "NUI_MESSAGE_TOKEN");
         if (nToken > 0) {

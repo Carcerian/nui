@@ -1,5 +1,5 @@
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-//::      _____                     _          
+//::      _____                     _
 //::     / ___/__ ____________ ____(_)__ ____ ( )___
 //::    / /__/ _ `/ __/ __/ -_) __/ / _ `/ _ \|/(_-<
 //::    \___/\_,_/_/  \__/\__/_/ /_/\_,_/_//_/ /___/
@@ -24,7 +24,7 @@
         Centralized configuration file for the Carcerian NUI System.
         Contains all core constants, error codes, and system parameters.
         Include this file first in all NUI modules.
-        
+
         All configuration in one place for easy maintenance and consistency
         across the entire NUI framework.
 
@@ -35,40 +35,40 @@
 /*  ERROR CODES                                                             */
 /* ----------------------------------------------------------------------- */
 
-const int NUI_ERROR = -1;               // Standard error return code
-const int NUI_SUCCESS = 0;              // Standard success return code
+const int NUI_ERROR = FALSE;               // Standard error return code
+const int NUI_SUCCESS = TRUE;              // Standard success return code
 
 /* ----------------------------------------------------------------------- */
 /*  WINDOW MANAGEMENT CONSTANTS                                             */
 /* ----------------------------------------------------------------------- */
+
+const int NUI_TOKEN_MIN = 1;            // Minimum valid token
+const int NUI_TOKEN_MAX = 10;           // Maximum token to check
 
 const int NUI_WINDOW_MIN_WIDTH = 200;   // Minimum window width
 const int NUI_WINDOW_MIN_HEIGHT = 100;  // Minimum window height
 const int NUI_WINDOW_MAX_WIDTH = 1024;  // Maximum window width
 const int NUI_WINDOW_MAX_HEIGHT = 768;  // Maximum window height
 
-const int NUI_TOKEN_MIN = 1;            // Minimum valid token
-const int NUI_TOKEN_MAX = 1000;         // Maximum token to check
-
 /* ----------------------------------------------------------------------- */
 /*  DEFAULT WINDOW SIZES                                                    */
 /* ----------------------------------------------------------------------- */
 
-const int NUI_WIDTH_SMALL = 300;        // Small popup
-const int NUI_WIDTH_MEDIUM = 500;       // Medium popup
-const int NUI_WIDTH_LARGE = 700;        // Large popup
+const float  NUI_WIDTH_SMALL = 300.0f;        // Small popup
+const float NUI_WIDTH_MEDIUM = 500.0f;       // Medium popup
+const float NUI_WIDTH_LARGE = 700.0f;        // Large popup
 
-const int NUI_HEIGHT_SMALL = 150;       // Small height
-const int NUI_HEIGHT_MEDIUM = 250;      // Medium height
-const int NUI_HEIGHT_LARGE = 400;       // Large height
+const float NUI_HEIGHT_SMALL = 150.0f;       // Small height
+const float NUI_HEIGHT_MEDIUM = 250.0f;      // Medium height
+const float NUI_HEIGHT_LARGE = 400.0f;       // Large height
 
 /* ----------------------------------------------------------------------- */
 /*  AOE SYSTEM CONSTANTS                                                    */
 /* ----------------------------------------------------------------------- */
 
-const int NUI_AOE_DURATION = 300;       // AOE duration in seconds (5 min)
-const float NUI_AOE_RADIUS = 5.0;       // AOE radius in meters
-const string NUI_AOE_VFX = "vfx_com_hit_holy";  // AOE visual effect
+const int    NUI_AOE_DURATION = 99999;         // AOE duration in seconds
+const float  NUI_AOE_RADIUS = 10.0;            // AOE radius in meters
+const string NUI_AOE_VFX = "vfx_com_hit_holy"; // AOE visual effect
 
 /* ----------------------------------------------------------------------- */
 /*  LAYOUT & DISPLAY CONSTANTS                                              */
@@ -122,17 +122,13 @@ const int NUI_FLAG_AUTO_CLEANUP = 1;    // Auto cleanup windows
 /*  WINDOW PROPERTY FLAGS (for NUI_DialogCreate nProps bitmask)             */
 /* ----------------------------------------------------------------------- */
 
+const int NUI_PROP_NONE = 0;            // All flags FALSE
 const int NUI_PROP_RESIZABLE = 1;       // Bit 0: Window can be resized
 const int NUI_PROP_COLLAPSIBLE = 2;     // Bit 1: Window can be minimized
 const int NUI_PROP_CLOSABLE = 4;        // Bit 2: Window has close (X) button
 const int NUI_PROP_BORDER = 8;          // Bit 3: Window has visible border
 const int NUI_PROP_TRANSPARENT = 16;    // Bit 4: Transparent background
-
-// Property combinations (for convenience)
-const int NUI_PROP_NONE = 0;                              // All flags FALSE
-const int NUI_PROP_CLOSABLE_ONLY = 4;                     // Closable only
-const int NUI_PROP_CLOSABLE_TRANSPARENT = 20;             // Closable + transparent (4 | 16)
-const int NUI_PROP_ALL = 31;                              // All flags TRUE (1 | 2 | 4 | 8 | 16)
+const int NUI_PROP_ALL = 31;            // All flags TRUE (1 | 2 | 4 | 8 | 16)
 
 /* ----------------------------------------------------------------------- */
 /*  AOE WINDOW BEHAVIOR FLAGS                                              */
