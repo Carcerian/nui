@@ -1,6 +1,6 @@
 # Carcerian NUI System v1.0
 
-A comprehensive Natural User Interface (NUI) popup and dialog system for Neverwinter Nights: Enhanced Edition (NWN:EE).
+A comprehensive NUI API, with Dialog Creator, Popup and aaddon module systems for Neverwinter Nights: Enhanced Edition (NWN:EE).
 
 ## Overview
 
